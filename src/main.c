@@ -3,6 +3,15 @@
 int main() {
 
     // тут можно потестить вручную
+    // float fa = 1.00000006f;
+    // float fb = 1.00000007f;
+    // printf("float: %d\n", fa == fb);
+    // s21_decimal a = {{100000006, 0, 0, 0}};
+    // s21_decimal b = {{100000007, 0, 0, 0}};
+    // set_scale(&a, 8); // 1.00000006
+    // set_scale(&b, 8); // 1.00000007
+
+    // printf("decimal: %d\n", s21_is_equal(a, b));
 
     // s21_decimal a = {{1, 0, 0, 0}};
     // s21_decimal b = {{999999999, 4294967295, 542101086, 0}};
@@ -17,6 +26,24 @@ int main() {
     // printf("s21_is_less_or_equal: %d\n", s21_is_less_or_equal(a, b));
     // printf("s21_is_greater: %d\n", s21_is_greater(a, b));
     // printf("s21_is_greater_or_equal: %d\n", s21_is_greater_or_equal(a, b));
+
+
+    // s21_decimal a = {{5000000, 0, 0, 0}};
+    // s21_decimal b = {{7000000, 0, 0, 0}};
+    // set_scale(&a, 7);
+    // set_scale(&b, 7);
+    // s21_decimal result;
+
+    // int status = s21_add(a, b, &result);
+
+    // printf("Status: %d\n", status);
+    // printf("Result bits: {%u, %u, %u, %u}\n", result.bits[0], result.bits[1], result.bits[2], result.bits[3]);
+    // printf("Scale: %d\n", get_scale(result));
+    // printf("Sign: %d\n", get_sign(result));
+
+    // float fa = 0.5f;
+    // float fb = 0.7f;
+    // printf("float: %.10g + %.10g = %.10g\n", fa, fb, fa + fb);
 
     return 0;
 }
@@ -74,13 +101,121 @@ void set_bit(s21_decimal* num, int bit, unsigned value) { // устанавли�
         num->bits[index] &= ~(1u << offset); // сбросить бит
 }
 
-void shift_left(s21_big_decimal* num) {
+void decimal_to_big(s21_decimal src, s21_big_decimal* dest) {
+    for (int i = 0; i < 3; i++) {
+        dest->bits[i] = src.bits[i]; // копируем мантиссу
+    }
+    for (int i = 3; i < 6; i++) {
+        dest->bits[i] = 0; // старшие 96 бит обнуляем
+    }
+}
+
+int big_to_decimal(s21_big_decimal src, s21_decimal* dest, int scale, int sign) {
+    if (src.bits[3] != 0 || src.bits[4] != 0 || src.bits[5] != 0) { // если занято больше 96 бит то делаем банковское округление
+        round_bank(&src, &scale);
+        if (src.bits[3] != 0 || src.bits[4] != 0 || src.bits[5] != 0) { // если после округления все равно остались лишние биты (когда scale == 0 и занято больше 96 битов)
+            return (sign == 0) ? 1 : 2;
+        }
+    }
+
+    for (int i = 0; i < 3; i++) { // копируем 96 бит
+        dest->bits[i] = src.bits[i];
+    }
+    set_scale(dest, scale); // устанавливаем порядок
+    set_sign(dest, sign); // устанавливаем знак
+
+    return 0;
+}
+
+void shift_left(s21_big_decimal* num) { // сдвиг на 1 влево (или *2) (быстрее чем add_big_decimal, так как работаем со сдвигами)
     unsigned memory = 0;
     for (int i = 0; i < (int)(sizeof(s21_big_decimal) / sizeof(unsigned)) - 1; ++i) {
         unsigned temp = num->bits[i]; // сохраняем текущий блок
         num->bits[i] <<= 1; // сдвигаем на 1 бит влево
         num->bits[i] |= memory; // подставляем бит-перенос из предыдущего блока
-        memory = temp >> (32 - 1); // сохраняем старший бит для следующего блока
+        memory = temp >> 31; // сохраняем старший бит для следующего блока
+    }
+}
+
+void round_bank(s21_big_decimal* value, int* scale) {
+    while ((value->bits[3] != 0 || value->bits[4] != 0 || value->bits[5] != 0) && *scale > 0) { // пока используется больше 96 бит или scale != 0
+        (*scale)--;
+        int remainder = divide_by_10_big_decimal(value); // отсекаем и запоминаем последний бит
+        if (remainder > 5) { // если больше 5 ++
+            add_1_to_big_decimal(value);
+        } else if (remainder == 5) {
+            if (value->bits[0] & 1u) { // если равно 5 и при этом бит перед ним четный ++
+                add_1_to_big_decimal(value);
+            }
+        }
+    }
+}
+
+void normalize_big_decimals(s21_big_decimal* a, int* scale_a, s21_big_decimal* b, int* scale_b) { // выравниваем порядки
+    while (*scale_a < *scale_b) {
+        multiply_by_10_big_decimal(a);
+        (*scale_a)++;
+    }
+    while (*scale_b < *scale_a) {
+        multiply_by_10_big_decimal(b);
+        (*scale_b)++;
+    }
+}
+
+///////////////////////// арифметика (werlagad) /////////////////////////
+int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+    // проверка что указатель не NULL
+    if (!result) return 1;
+
+    // проверка на знак
+    int sign_value_1 = get_sign(value_1);
+    // int sign_value_2 = get_sign(value_2);
+
+    // if (sign_value_1 != sign_value_2) { // если знаки разные, то это вычитание
+    //     if (sign_value_1 == 1) { // вычитаем отрицательное
+    //         set_sign(&value_1, 0);
+    //         return s21_sub(value_2, value_1, result);
+    //     } else {
+    //         set_sign(&value_2, 0);
+    //         return s21_sub(value_1, value_2, result);
+    //     }
+    // }
+
+    // преобразуем в big_decimal
+    s21_big_decimal value_1_big, value_2_big, result_big;
+    decimal_to_big(value_1, &value_1_big);
+    decimal_to_big(value_2, &value_2_big);
+
+    // нормализация scale
+    int scale_value_1 = get_scale(value_1);
+    int scale_value_2 = get_scale(value_2);
+    normalize_big_decimals(&value_1_big, &scale_value_1, &value_2_big, &scale_value_2);
+
+    // складываем побайтово в big_decimal
+    add_big_decimal(&value_1_big, &value_2_big, &result_big);
+
+    // преобразуем в decimal (используем банковское округление)
+    return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+}
+
+// int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+// }
+
+// int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+// }
+
+// int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+// }
+
+void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) { // складываем две структуры
+    unsigned memory = 0;
+    for (int i = 0; i < 6; i++) {
+        uint64_t sum = (uint64_t)a->bits[i] + b->bits[i] + memory; // складываем два uint32 + перенос
+        result->bits[i] = (uint32_t)sum; // сохраняем младшие 32 бита результата
+        memory = sum >> 32; // сохраняем перенос (старшие биты)
     }
 }
 
@@ -94,33 +229,22 @@ void multiply_by_10_big_decimal(s21_big_decimal* num) { // x * 10 = x * 8 + x * 
     add_big_decimal(&temp1, &temp2, num); // num = temp1 + temp2
 }
 
-void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) { // объединяем две структуры, полученные в multiply_by_10_big_decimal
-    unsigned memory = 0;
-    for (int i = 0; i < 6; i++) {
-        uint64_t sum = (uint64_t)a->bits[i] + b->bits[i] + memory; // складываем два uint32 + перенос
-        result->bits[i] = (uint32_t)sum; // сохраняем младшие 32 бита результата
-        memory = sum >> 32; // сохраняем перенос (старшие биты)
+int divide_by_10_big_decimal(s21_big_decimal* value) { // деление на 10 для банковского округления
+    uint64_t remainder = 0;
+
+    for (int i = 5; i >= 0; i--) {
+        uint64_t full = (remainder << 32) | value->bits[i]; // объединяем остаток и текущий блок
+        value->bits[i] = (uint32_t)(full / 10); // записываем результат деления
+        remainder = full % 10; // сохраняем остаток
     }
+
+    return (int)remainder; // возвращаем остаток от всего деления
 }
 
-void decimal_to_big(s21_decimal src, s21_big_decimal* dest) {
-    for (int i = 0; i < 3; i++) {
-        dest->bits[i] = src.bits[i]; // копируем мантиссу
-    }
-    for (int i = 3; i < 6; i++) {
-        dest->bits[i] = 0; // старшие 96 бит обнуляем
-    }
-}
-
-void normalize_big_decimals(s21_big_decimal* a, int* scale_a, s21_big_decimal* b, int* scale_b) {
-    while (*scale_a < *scale_b) {
-        multiply_by_10_big_decimal(a);
-        (*scale_a)++;
-    }
-    while (*scale_b < *scale_a) {
-        multiply_by_10_big_decimal(b);
-        (*scale_b)++;
-    }
+void add_1_to_big_decimal(s21_big_decimal* value) { // когда надо просто прибавить 1 создаем минимальный децимал и передаем его в функцию сложения
+    s21_big_decimal one = {0};
+    one.bits[0] = 1;
+    add_big_decimal(value, &one, value);
 }
 
 ///////////////////////// compare (werlagad) /////////////////////////
