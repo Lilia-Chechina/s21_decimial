@@ -1,50 +1,17 @@
 #include "main.h"
 
 int main() {
-
-    // тут можно потестить вручную
-    // float fa = 1.00000006f;
-    // float fb = 1.00000007f;
-    // printf("float: %d\n", fa == fb);
-    // s21_decimal a = {{100000006, 0, 0, 0}};
-    // s21_decimal b = {{100000007, 0, 0, 0}};
-    // set_scale(&a, 8); // 1.00000006
-    // set_scale(&b, 8); // 1.00000007
-
-    // printf("decimal: %d\n", s21_is_equal(a, b));
-
-    // s21_decimal a = {{1, 0, 0, 0}};
-    // s21_decimal b = {{999999999, 4294967295, 542101086, 0}};
-    // set_scale(&b, 28);
-
-    // printf("%d ", s21_compare(a, b));
-    // printf("\na = %.10g (scale = %d)\n", input_a, scale_a);
-    // printf("b = %.10g (scale = %d)\n\n", input_b, scale_b);
-    // printf("s21_is_equal: %d\n", s21_is_equal(a, b));
-    // printf("s21_is_not_equal: %d\n", s21_is_not_equal(a, b));
-    // printf("s21_is_less: %d\n", s21_is_less(a, b));
-    // printf("s21_is_less_or_equal: %d\n", s21_is_less_or_equal(a, b));
-    // printf("s21_is_greater: %d\n", s21_is_greater(a, b));
-    // printf("s21_is_greater_or_equal: %d\n", s21_is_greater_or_equal(a, b));
-
-
-    // s21_decimal a = {{5000000, 0, 0, 0}};
-    // s21_decimal b = {{7000000, 0, 0, 0}};
-    // set_scale(&a, 7);
-    // set_scale(&b, 7);
+    // s21_decimal a = {{400, 0, 0, 0}};
+    // s21_decimal b = {{100, 0, 0, 0}};
+    // set_sign(&a, 1);
+    // set_sign(&b, 1);
+    // set_scale(&a, 2);
     // s21_decimal result;
-
-    // int status = s21_add(a, b, &result);
-
+    // int status = s21_sub(a, b, &result);
     // printf("Status: %d\n", status);
     // printf("Result bits: {%u, %u, %u, %u}\n", result.bits[0], result.bits[1], result.bits[2], result.bits[3]);
     // printf("Scale: %d\n", get_scale(result));
     // printf("Sign: %d\n", get_sign(result));
-
-    // float fa = 0.5f;
-    // float fb = 0.7f;
-    // printf("float: %.10g + %.10g = %.10g\n", fa, fb, fa + fb);
-
     return 0;
 }
 
@@ -165,21 +132,21 @@ void normalize_big_decimals(s21_big_decimal* a, int* scale_a, s21_big_decimal* b
 ///////////////////////// арифметика (werlagad) /////////////////////////
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // проверка что указатель не NULL
-    if (!result) return 1;
+    if (!result) return -1;
 
     // проверка на знак
     int sign_value_1 = get_sign(value_1);
-    // int sign_value_2 = get_sign(value_2);
+    int sign_value_2 = get_sign(value_2);
 
-    // if (sign_value_1 != sign_value_2) { // если знаки разные, то это вычитание
-    //     if (sign_value_1 == 1) { // вычитаем отрицательное
-    //         set_sign(&value_1, 0);
-    //         return s21_sub(value_2, value_1, result);
-    //     } else {
-    //         set_sign(&value_2, 0);
-    //         return s21_sub(value_1, value_2, result);
-    //     }
-    // }
+    if (sign_value_1 != sign_value_2) { // если знаки разные, то это вычитание
+        if (sign_value_1 == 1) { // вычитаем отрицательное
+            set_sign(&value_1, 0);
+            return s21_sub(value_2, value_1, result);
+        } else {
+            set_sign(&value_2, 0);
+            return s21_sub(value_1, value_2, result);
+        }
+    }
 
     // преобразуем в big_decimal
     s21_big_decimal value_1_big, value_2_big, result_big;
@@ -198,9 +165,49 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
 }
 
-// int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+    // проверка что указатель не NULL
+    if (!result) return -1;
 
-// }
+    // проверка на знак
+    int sign_value_1 = get_sign(value_1);
+    int sign_value_2 = get_sign(value_2);
+
+    if (sign_value_1 == 0 && sign_value_2 == 1) { // если +a -b (то есть a - (-b)), то отправляем в сложение, но делаем b положительным
+        set_sign(&value_2, 0);
+        return s21_add(value_1, value_2, result);
+    } else if (sign_value_1 == 1 && sign_value_2 == 0) { // если -a +b (то есть (-a) - b = -(a + b)), то отправляем в сложение, но делаем b отрицательным
+        set_sign(&value_2, 1);
+        return s21_add(value_1, value_2, result);
+    } else if (sign_value_1 == 1 && sign_value_2 == 1) { // если -a -b (то есть -a - (-b) = b - a), то меняем знаки у обоих и отрпавляем в вычитание в другом порядке
+        set_sign(&value_1, 0);
+        set_sign(&value_2, 0);
+        return s21_sub(value_2, value_1, result);
+    }
+    // сюда дойдут только два положительных числа
+
+    // преобразуем в big_decimal
+    s21_big_decimal value_1_big, value_2_big, result_big;
+    decimal_to_big(value_1, &value_1_big);
+    decimal_to_big(value_2, &value_2_big);
+
+    // нормализация scale
+    int scale_value_1 = get_scale(value_1);
+    int scale_value_2 = get_scale(value_2);
+    normalize_big_decimals(&value_1_big, &scale_value_1, &value_2_big, &scale_value_2);
+
+    // определяем знак результата и что из чего вычитать
+    if (s21_compare(value_1, value_2) >= 0) { // если a >= b, то результат положительный
+        sign_value_1 = 0;
+        subtract_big_decimal(&value_1_big, &value_2_big, &result_big);
+    } else { // иначе b > a, получаем отрицательный результат и вычитаем из b
+        sign_value_1 = 1;
+        subtract_big_decimal(&value_2_big, &value_1_big, &result_big);
+    }
+
+    // преобразуем в decimal (используем банковское округление)
+    return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+}
 
 // int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
@@ -216,6 +223,22 @@ void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* re
         uint64_t sum = (uint64_t)a->bits[i] + b->bits[i] + memory; // складываем два uint32 + перенос
         result->bits[i] = (uint32_t)sum; // сохраняем младшие 32 бита результата
         memory = sum >> 32; // сохраняем перенос (старшие биты)
+    }
+}
+
+void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) {
+    unsigned borrow = 0;
+    for (int i = 0; i < 6; i++) {
+        uint64_t ai = a->bits[i];
+        uint64_t bi = b->bits[i] + borrow; // занимаемый десяток у предыдущего числа мы не вычитаем из a->bits[i], а прибавляем к b->bits[i]
+
+        if (ai >= bi) {
+            result->bits[i] = (uint32_t)(ai - bi);
+            borrow = 0;
+        } else { // если надо занимать
+            result->bits[i] = (uint32_t)(UINT64_C(1) << 32) + ai - bi; // UINT64_C обязателен, иначе 1 будет представлен в виде 32 битов
+            borrow = 1;
+        }
     }
 }
 

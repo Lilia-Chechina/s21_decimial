@@ -40,6 +40,7 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 
 void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result);
+void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result);
 
 void multiply_by_10_big_decimal(s21_big_decimal* num);
 int divide_by_10_big_decimal(s21_big_decimal* value);
