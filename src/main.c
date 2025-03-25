@@ -3,18 +3,33 @@
 int main() {
     // s21_decimal a = {{400, 0, 0, 0}};
     // s21_decimal b = {{100, 0, 0, 0}};
-    // set_sign(&a, 1);
-    // set_sign(&b, 1);
-    // set_scale(&a, 2);
     // s21_decimal result;
-    // int status = s21_sub(a, b, &result);
-    // printf("Status: %d\n", status);
-    // printf("Result bits: {%u, %u, %u, %u}\n", result.bits[0], result.bits[1], result.bits[2], result.bits[3]);
-    // printf("Scale: %d\n", get_scale(result));
-    // printf("Sign: %d\n", get_sign(result));
+    // int status;
+
+    // set_scale(&a, 2);
+    // set_scale(&b, 1);
+    // set_sign(&a, 0);
+    // set_sign(&b, 1);
+
+    // printf("a = 4.00, b = -10.0\n");
+
+    // status = s21_add(a, b, &result);
+    // printf("ADD → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
+    //     get_scale(result), get_sign(result));
+
+    // status = s21_sub(a, b, &result);
+    // printf("SUB → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
+    //     get_scale(result), get_sign(result));
+
+    // status = s21_mul(a, b, &result);
+    // printf("MUL → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
+    //     get_scale(result), get_sign(result));
+
     return 0;
 }
-
 
 ////////////////// вспомогательные функции (werlagad) /////////////////
 int is_zero(s21_decimal num) { // проверяем, что все три части мантиссы равны 0
@@ -209,9 +224,27 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
 }
 
-// int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+    // проверка что указатель не NULL
+    if (!result) return -1;
 
-// }
+    // обработка знака
+    int sign_result = get_sign(value_1) ^ get_sign(value_2); // исключающее или
+
+    // преобразуем в big_decimal
+    s21_big_decimal value_1_big, value_2_big, result_big;
+    decimal_to_big(value_1, &value_1_big);
+    decimal_to_big(value_2, &value_2_big);
+
+    // складываем порядки
+    int scale = get_scale(value_1) + get_scale(value_2);
+
+    // перемножаем побайтово в big_decimal
+    multiply_big_decimals(&value_1_big, &value_2_big, &result_big);
+
+    // преобразуем в decimal (используем банковское округление)
+    return big_to_decimal(result_big, result, scale, sign_result);
+}
 
 // int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
@@ -239,6 +272,33 @@ void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decima
             result->bits[i] = (uint32_t)(UINT64_C(1) << 32) + ai - bi; // UINT64_C обязателен, иначе 1 будет представлен в виде 32 битов
             borrow = 1;
         }
+    }
+}
+
+void multiply_big_decimals(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) {
+    // временное хранилище результата умножения (так как может не хватить места)
+    uint64_t temp[12] = {0};
+
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 6; j++) {
+            uint64_t mul = (uint64_t)a->bits[i] * b->bits[j]; // перемножаем 32-битные блоки → получаем 64-битный результат
+
+            temp[i + j] += mul; // прибавляем младшие 32 бита к позиции i + j
+
+            // если произошёл перенос (сумма > UINT32_MAX), обрабатываем его
+            if (temp[i + j] < mul) {
+                temp[i + j + 1]++;
+            }
+
+            // прибавляем старшие 32 бита результата
+            temp[i + j + 1] += temp[i + j] >> 32;
+            temp[i + j] &= 0xFFFFFFFF; // оставляем только младшие 32 бита
+        }
+    }
+
+    // копируем результат в структуру big_decimal (только первые 6 блоков — 192 бита)
+    for (int i = 0; i < 6; i++) {
+        result->bits[i] = (uint32_t)temp[i];
     }
 }
 
