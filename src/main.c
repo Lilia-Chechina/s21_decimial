@@ -13,20 +13,47 @@ int main() {
 
     // printf("a = 4.00, b = -10.0\n");
 
-    // status = s21_add(a, b, &result);
-    // printf("ADD → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
-    //     get_scale(result), get_sign(result));
-
-    // status = s21_sub(a, b, &result);
-    // printf("SUB → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
-    //     get_scale(result), get_sign(result));
-
     // status = s21_mul(a, b, &result);
     // printf("MUL → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
     //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
     //     get_scale(result), get_sign(result));
+
+    // // Тест 1: максимальное значение, которое умножается без переполнения
+    // s21_decimal max1 = {{UINT32_MAX, UINT32_MAX, UINT32_MAX, 0}};
+    // s21_decimal two = {{2, 0, 0, 0}};
+    // s21_decimal res1;
+    // set_scale(&max1, 0);
+    // set_sign(&max1, 0);
+    // set_scale(&two, 0);
+    // set_sign(&two, 0);
+    // status = s21_mul(max1, two, &res1);
+    // printf("TEST 1 (MAX * 2): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, res1.bits[0], res1.bits[1], res1.bits[2], res1.bits[3],
+    //     get_scale(res1), get_sign(res1));
+
+    // // Тест 2: максимальное значение, умножение на 10 с переполнением
+    // s21_decimal big = {{UINT32_MAX, UINT32_MAX, UINT32_MAX, 0}};
+    // s21_decimal ten = {{10, 0, 0, 0}};
+    // s21_decimal res2;
+    // set_scale(&big, 0);
+    // set_scale(&ten, 0);
+    // set_sign(&big, 0);
+    // set_sign(&ten, 0);
+    // status = s21_mul(big, ten, &res2);
+    // printf("TEST 2 (MAX * 10): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, res2.bits[0], res2.bits[1], res2.bits[2], res2.bits[3],
+    //     get_scale(res2), get_sign(res2));
+
+    // // Тест 3: большое число с большим scale, умножаем на 1
+    // s21_decimal large_scaled = {{1, 0, 0, 0}};
+    // s21_decimal one = {{1, 0, 0, 0}};
+    // s21_decimal res3;
+    // set_scale(&large_scaled, 28);
+    // set_scale(&one, 0);
+    // status = s21_mul(large_scaled, one, &res3);
+    // printf("TEST 3 (1e-28 * 1): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
+    //     status, res3.bits[0], res3.bits[1], res3.bits[2], res3.bits[3],
+    //     get_scale(res3), get_sign(res3));
 
     return 0;
 }
@@ -276,27 +303,27 @@ void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decima
 }
 
 void multiply_big_decimals(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) {
-    // временное хранилище результата умножения (так как может не хватить места)
-    uint64_t temp[12] = {0};
+    // временное хранилище результата умножения (не боимся за переполнение, так как сейчас в a и b старшие 92 бита это нули)
+    uint64_t temp[6] = {0};
 
-    for (int i = 0; i < 6; i++) {
-        for (int j = 0; j < 6; j++) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
             uint64_t mul = (uint64_t)a->bits[i] * b->bits[j]; // перемножаем 32-битные блоки → получаем 64-битный результат
 
             temp[i + j] += mul; // прибавляем младшие 32 бита к позиции i + j
 
-            // если произошёл перенос (сумма > UINT32_MAX), обрабатываем его
+            // если произошёл перенос (сумма > UINT32_MAX), обрабатываем его (то есть может произойти автоматическое переполнение, которое надо проконтролировать)
             if (temp[i + j] < mul) {
                 temp[i + j + 1]++;
             }
 
-            // прибавляем старшие 32 бита результата
+            // прибавляем старшие 32 бита результата (так как в result байты хранятся в 32 битах)
             temp[i + j + 1] += temp[i + j] >> 32;
             temp[i + j] &= 0xFFFFFFFF; // оставляем только младшие 32 бита
         }
     }
 
-    // копируем результат в структуру big_decimal (только первые 6 блоков — 192 бита)
+    // копируем результат в структуру big_decimal
     for (int i = 0; i < 6; i++) {
         result->bits[i] = (uint32_t)temp[i];
     }
