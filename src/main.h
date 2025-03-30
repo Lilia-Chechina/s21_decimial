@@ -25,6 +25,7 @@ void set_scale(s21_decimal* num, int scale_value);
 int get_bit(s21_decimal num, int bit);
 int get_bit_big_decimal(s21_big_decimal num, int bit);
 void set_bit(s21_decimal* num, int bit, unsigned value);
+void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value);
 
 void decimal_to_big(s21_decimal src, s21_big_decimal* dest);
 int big_to_decimal(s21_big_decimal src, s21_decimal* dest, int scale, int sign);
@@ -42,11 +43,13 @@ void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* re
 void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result);
 void multiply_big_decimals(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result);
 void multiply_by_10_big_decimal(s21_big_decimal* num);
+int divide_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result, s21_big_decimal* remainder);
 int divide_by_10_big_decimal(s21_big_decimal* value);
 void add_1_to_big_decimal(s21_big_decimal* value);
 
 ///////////////////////// сравнения (werlagad) /////////////////////////
 int s21_compare(s21_decimal a, s21_decimal b);
+int compare_big_decimal(s21_big_decimal *a, s21_big_decimal *b);
 
 int s21_is_equal(s21_decimal a, s21_decimal b);
 int s21_is_not_equal(s21_decimal a, s21_decimal b);

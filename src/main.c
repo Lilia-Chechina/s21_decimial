@@ -1,60 +1,6 @@
 #include "main.h"
 
 int main() {
-    // s21_decimal a = {{400, 0, 0, 0}};
-    // s21_decimal b = {{100, 0, 0, 0}};
-    // s21_decimal result;
-    // int status;
-
-    // set_scale(&a, 2);
-    // set_scale(&b, 1);
-    // set_sign(&a, 0);
-    // set_sign(&b, 1);
-
-    // printf("a = 4.00, b = -10.0\n");
-
-    // status = s21_mul(a, b, &result);
-    // printf("MUL → Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, result.bits[0], result.bits[1], result.bits[2], result.bits[3],
-    //     get_scale(result), get_sign(result));
-
-    // // Тест 1: максимальное значение, которое умножается без переполнения
-    // s21_decimal max1 = {{UINT32_MAX, UINT32_MAX, UINT32_MAX, 0}};
-    // s21_decimal two = {{2, 0, 0, 0}};
-    // s21_decimal res1;
-    // set_scale(&max1, 0);
-    // set_sign(&max1, 0);
-    // set_scale(&two, 0);
-    // set_sign(&two, 0);
-    // status = s21_mul(max1, two, &res1);
-    // printf("TEST 1 (MAX * 2): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, res1.bits[0], res1.bits[1], res1.bits[2], res1.bits[3],
-    //     get_scale(res1), get_sign(res1));
-
-    // // Тест 2: максимальное значение, умножение на 10 с переполнением
-    // s21_decimal big = {{UINT32_MAX, UINT32_MAX, UINT32_MAX, 0}};
-    // s21_decimal ten = {{10, 0, 0, 0}};
-    // s21_decimal res2;
-    // set_scale(&big, 0);
-    // set_scale(&ten, 0);
-    // set_sign(&big, 0);
-    // set_sign(&ten, 0);
-    // status = s21_mul(big, ten, &res2);
-    // printf("TEST 2 (MAX * 10): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, res2.bits[0], res2.bits[1], res2.bits[2], res2.bits[3],
-    //     get_scale(res2), get_sign(res2));
-
-    // // Тест 3: большое число с большим scale, умножаем на 1
-    // s21_decimal large_scaled = {{1, 0, 0, 0}};
-    // s21_decimal one = {{1, 0, 0, 0}};
-    // s21_decimal res3;
-    // set_scale(&large_scaled, 28);
-    // set_scale(&one, 0);
-    // status = s21_mul(large_scaled, one, &res3);
-    // printf("TEST 3 (1e-28 * 1): Status: %d | Result: {%u, %u, %u, %u} | Scale: %d | Sign: %d\n",
-    //     status, res3.bits[0], res3.bits[1], res3.bits[2], res3.bits[3],
-    //     get_scale(res3), get_sign(res3));
-
     return 0;
 }
 
@@ -110,6 +56,15 @@ void set_bit(s21_decimal* num, int bit, unsigned value) { // устанавли�
         num->bits[index] &= ~(1u << offset); // сбросить бит
 }
 
+void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value) { // также как с set_bit только для big_decimal (используется в делении)
+    int index = bit / 32;
+    int offset = bit % 32;
+    if (value)
+        num->bits[index] |= (1u << offset);
+    else
+        num->bits[index] &= ~(1u << offset);
+}
+
 void decimal_to_big(s21_decimal src, s21_big_decimal* dest) {
     for (int i = 0; i < 3; i++) {
         dest->bits[i] = src.bits[i]; // копируем мантиссу
@@ -127,6 +82,7 @@ int big_to_decimal(s21_big_decimal src, s21_decimal* dest, int scale, int sign) 
         }
     }
 
+    null_decimal(dest);
     for (int i = 0; i < 3; i++) { // копируем 96 бит
         dest->bits[i] = src.bits[i];
     }
@@ -255,7 +211,7 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // проверка что указатель не NULL
     if (!result) return -1;
 
-    // обработка знака
+    // обработка знака результата
     int sign_result = get_sign(value_1) ^ get_sign(value_2); // исключающее или
 
     // преобразуем в big_decimal
@@ -273,9 +229,54 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     return big_to_decimal(result_big, result, scale, sign_result);
 }
 
-// int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+    // проверка что указатель не NULL
+    if (!result) return -1;
 
-// }
+    // проверка деления на 0
+    if (is_zero(value_2)) {
+        return 3;
+    }
+
+    // обработка знака результата
+    int sign = get_sign(value_1) ^ get_sign(value_2); // исключающее или
+
+    // преобразуем в big_decimal
+    s21_big_decimal value_1_big, value_2_big, result_big;
+    decimal_to_big(value_1, &value_1_big);
+    decimal_to_big(value_2, &value_2_big);
+
+    // нормализация scale
+    int scale_value_1 = get_scale(value_1);
+    int scale_value_2 = get_scale(value_2);
+    normalize_big_decimals(&value_1_big, &scale_value_1, &value_2_big, &scale_value_2);
+
+    s21_big_decimal remainder_big; // для хранения остатка
+    divide_big_decimal(&value_1_big, &value_2_big, &result_big, &remainder_big); // получаем целую часть и остаток
+
+    // получаем дробную часть из остатка, для этого:
+    // 1 - домножаем остаток на 10^28, чтобы получить максимально точную дробную часть, это необходимо для того, чтобы при повторном делении (например, при бесконечном периоде, как 1/3 = 0.333...) заполнить все доступные биты мантиссы (96 бит) в decimal и получить результат с максимально возможной точностью
+    for (int i = 0; i < 28; i++) {
+        multiply_by_10_big_decimal(&remainder_big);
+    }
+    // теперь scale остатка = 28
+
+    // делим остаток (остаток от деления остатка нам не нужен, так как он точно не поместится)
+    s21_big_decimal fractional_big, remainder_unused;
+    divide_big_decimal(&remainder_big, &value_2_big, &fractional_big, &remainder_unused);
+
+    // целую часть приводим к scale = 28, чтобы сложить корректно (нормализация)
+    for (int i = 0; i < 28; i++) {
+        multiply_by_10_big_decimal(&result_big);
+    }
+
+    // складываем целую часть (scale = 28) и ее бывший остаток (scale = 28)
+    add_big_decimal(&result_big, &fractional_big, &result_big);
+
+    // результат имеет scale = 28
+    int final_scale = 28;
+    return big_to_decimal(result_big, result, final_scale, sign);
+}
 
 void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) { // складываем две структуры
     unsigned memory = 0;
@@ -339,6 +340,33 @@ void multiply_by_10_big_decimal(s21_big_decimal* num) { // x * 10 = x * 8 + x * 
     add_big_decimal(&temp1, &temp2, num); // num = temp1 + temp2
 }
 
+int divide_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result, s21_big_decimal* remainder) { // ищем наибольшее q, при котором верно: b * 2**q <= a
+    s21_big_decimal current_b, prev_b;
+    s21_big_decimal temp_a = *a;
+
+    while (compare_big_decimal(&temp_a, b) >= 0) { // пока делимое больше делителя
+        int q = 0; // степень двойки
+        current_b = *b; // для запоминания промежуточного результата
+
+        do {
+            prev_b = current_b;  // запоминаем предыдущий
+            shift_left(&current_b);  // умножаем на 2
+            q++; // повышаем степень двойки
+        } while (compare_big_decimal(&current_b, &temp_a) <= 0); // do-while, потому что надо гарантированно выполнить хотя бы одну итерацию
+
+        // используем prev_b вместо сдвига вправо
+        s21_big_decimal temp_result = {0};
+        set_bit_big_decimal(&temp_result, q - 1, 1); // result += 2**(q - 1)
+        add_big_decimal(result, &temp_result, result); // обновляем result
+
+        subtract_big_decimal(&temp_a, &prev_b, &temp_a); // вычитаем найденное значение из текущего остатка
+    }
+
+    *remainder = temp_a;
+
+    return 0;
+}
+
 int divide_by_10_big_decimal(s21_big_decimal* value) { // деление на 10 для банковского округления
     uint64_t remainder = 0;
 
@@ -397,6 +425,18 @@ int s21_compare(s21_decimal a, s21_decimal b) {
     if (sign_a == 1) flag *= -1;  // если знак отрицательный, меняем знак результата
 
     return flag;
+}
+
+int compare_big_decimal(s21_big_decimal *a, s21_big_decimal *b) { // нужно для деления
+    for (int i = 191; i >= 0; i--) {
+        int bit_a = get_bit_big_decimal(*a, i);
+        int bit_b = get_bit_big_decimal(*b, i);
+
+        if (bit_a != bit_b)
+            return bit_a > bit_b ? 1 : -1;
+    }
+
+    return 0;
 }
 
 int s21_is_equal(s21_decimal a, s21_decimal b) {
