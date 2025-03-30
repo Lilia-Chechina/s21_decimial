@@ -1,12 +1,18 @@
 #include "main.h"
 
-int main() {
-    return 0;
-}
-
 ////////////////// вспомогательные функции (werlagad) /////////////////
 int is_zero(s21_decimal num) { // проверяем, что все три части мантиссы равны 0
     return num.bits[0] == 0 && num.bits[1] == 0 && num.bits[2] == 0;
+}
+
+int is_zero_big_decimal(s21_big_decimal num) { // как is_zero, только с big_decimal
+    for (int i = 0; i < 6; i++)
+        if (num.bits[i] != 0) return 0;
+    return 1;
+}
+
+void null_big_decimal(s21_big_decimal* num) { // обнуляем
+    for (int i = 0; i < 6; i++) num->bits[i] = 0;
 }
 
 void null_decimal(s21_decimal* num) { // обнуляем все 4 элемента массива bits
@@ -41,7 +47,7 @@ int get_bit(s21_decimal num, int bit) { // получаем конкретный
     return (num.bits[index] >> offset) & 1u;
 }
 
-int get_bit_big_decimal(s21_big_decimal num, int bit) { // также как и get_bit только для bit_decimal
+int get_bit_big_decimal(s21_big_decimal num, int bit) { // как и get_bit, только для bit_decimal
     int index = bit / 32;
     int offset = bit % 32;
     return (num.bits[index] >> offset) & 1u;
@@ -56,7 +62,7 @@ void set_bit(s21_decimal* num, int bit, unsigned value) { // устанавли�
         num->bits[index] &= ~(1u << offset); // сбросить бит
 }
 
-void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value) { // также как с set_bit только для big_decimal (используется в делении)
+void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value) { // как с set_bit, только для big_decimal (используется в делении)
     int index = bit / 32;
     int offset = bit % 32;
     if (value)
@@ -232,17 +238,13 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // проверка что указатель не NULL
     if (!result) return -1;
-
-    // проверка деления на 0
-    if (is_zero(value_2)) {
-        return 3;
-    }
+    if (is_zero(value_2)) return 3; // деление на 0
 
     // обработка знака результата
-    int sign = get_sign(value_1) ^ get_sign(value_2); // исключающее или
+    int sign = get_sign(value_1) ^ get_sign(value_2);
 
     // преобразуем в big_decimal
-    s21_big_decimal value_1_big, value_2_big, result_big;
+    s21_big_decimal value_1_big, value_2_big, result_big, remainder_big;
     decimal_to_big(value_1, &value_1_big);
     decimal_to_big(value_2, &value_2_big);
 
@@ -251,31 +253,29 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     int scale_value_2 = get_scale(value_2);
     normalize_big_decimals(&value_1_big, &scale_value_1, &value_2_big, &scale_value_2);
 
-    s21_big_decimal remainder_big; // для хранения остатка
-    divide_big_decimal(&value_1_big, &value_2_big, &result_big, &remainder_big); // получаем целую часть и остаток
+    null_big_decimal(&result_big); // изначально результат = 0
 
-    // получаем дробную часть из остатка, для этого:
-    // 1 - домножаем остаток на 10^28, чтобы получить максимально точную дробную часть, это необходимо для того, чтобы при повторном делении (например, при бесконечном периоде, как 1/3 = 0.333...) заполнить все доступные биты мантиссы (96 бит) в decimal и получить результат с максимально возможной точностью
-    for (int i = 0; i < 28; i++) {
+    // получаем целую часть и остаток
+    divide_big_decimal(&value_1_big, &value_2_big, &result_big, &remainder_big);
+
+    // сразу начинаем вычислять дробную часть по одной цифре
+    int scale = 0;
+    while (!is_zero_big_decimal(remainder_big) && scale < 28) {
         multiply_by_10_big_decimal(&remainder_big);
-    }
-    // теперь scale остатка = 28
 
-    // делим остаток (остаток от деления остатка нам не нужен, так как он точно не поместится)
-    s21_big_decimal fractional_big, remainder_unused;
-    divide_big_decimal(&remainder_big, &value_2_big, &fractional_big, &remainder_unused);
+        s21_big_decimal digit, new_remainder;
+        divide_big_decimal(&remainder_big, &value_2_big, &digit, &new_remainder);
 
-    // целую часть приводим к scale = 28, чтобы сложить корректно (нормализация)
-    for (int i = 0; i < 28; i++) {
+        // умножаем текущий результат на 10 (добавляем разряд)
         multiply_by_10_big_decimal(&result_big);
+
+        // сразу прибавляем новую цифру (она всегда меньше 10)
+        add_big_decimal(&result_big, &digit, &result_big);
+
+        remainder_big = new_remainder;
+        scale++;
     }
-
-    // складываем целую часть (scale = 28) и ее бывший остаток (scale = 28)
-    add_big_decimal(&result_big, &fractional_big, &result_big);
-
-    // результат имеет scale = 28
-    int final_scale = 28;
-    return big_to_decimal(result_big, result, final_scale, sign);
+    return  big_to_decimal(result_big, result, scale, sign);
 }
 
 void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) { // складываем две структуры
