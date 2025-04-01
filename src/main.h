@@ -1,25 +1,32 @@
-#ifndef S21_DECIMAL_H_
-#define S21_DECIMAL_H_
-
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
-    uint32_t bits[4];
+    __uint32_t bits[4];
 } s21_decimal;
 
 typedef struct {
     uint32_t bits[6];
 } s21_big_decimal;
 
-////////////////// вспомогательные функции (werlagad) /////////////////
+int s21_truncate(s21_decimal value, s21_decimal *result);
+int s21_negate(s21_decimal value, s21_decimal *result);
+
+//Help
+void s21_print_bits(s21_decimal value);
+void s21_set_sign(s21_decimal* value, bool is_negative);
+bool s21_get_sign(s21_decimal value);
+int s21_get_rank(s21_decimal value);
+void s21_copy(s21_decimal value, s21_decimal* result);
+
+//werlagad
+
+//Help
 int is_zero(s21_decimal num);
 int is_zero_big_decimal(s21_big_decimal num);
 void null_big_decimal(s21_big_decimal* num);
 void null_decimal(s21_decimal* num);
-
-int get_sign(s21_decimal num);
-void set_sign(s21_decimal* num, int sign_value);
 
 int get_scale(s21_decimal num);
 void set_scale(s21_decimal* num, int scale_value);
@@ -35,7 +42,7 @@ void shift_left(s21_big_decimal* num);
 void round_bank(s21_big_decimal* value, int* scale);
 void normalize_big_decimals(s21_big_decimal* a, int* scale_a, s21_big_decimal* b, int* scale_b);
 
-///////////////////////// арифметика (werlagad) /////////////////////////
+//Arithmetic
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
@@ -49,7 +56,7 @@ int divide_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* 
 int divide_by_10_big_decimal(s21_big_decimal* value);
 void add_1_to_big_decimal(s21_big_decimal* value);
 
-///////////////////////// сравнения (werlagad) /////////////////////////
+//Comparison
 int s21_compare(s21_decimal a, s21_decimal b);
 int compare_big_decimal(s21_big_decimal *a, s21_big_decimal *b);
 
@@ -59,5 +66,3 @@ int s21_is_less(s21_decimal a, s21_decimal b);
 int s21_is_less_or_equal(s21_decimal a, s21_decimal b);
 int s21_is_greater(s21_decimal a, s21_decimal b);
 int s21_is_greater_or_equal(s21_decimal a, s21_decimal b);
-
-#endif
