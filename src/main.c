@@ -11,14 +11,14 @@ int is_zero_big_decimal(s21_big_decimal num) { // как is_zero, только �
     return 1;
 }
 
-void null_big_decimal(s21_big_decimal* num) { // обнуляем
-    for (int i = 0; i < 6; i++) num->bits[i] = 0;
-}
-
 void null_decimal(s21_decimal* num) { // обнуляем все 4 элемента массива bits
     for (int i = 0; i < 4; i++) {
         num->bits[i] = 0;
     }
+}
+
+void null_big_decimal(s21_big_decimal* num) { // обнуляем
+    for (int i = 0; i < 6; i++) num->bits[i] = 0;
 }
 
 int get_sign(s21_decimal num) { // получаем знак из 31-го бита bits[3]
@@ -84,6 +84,7 @@ int big_to_decimal(s21_big_decimal src, s21_decimal* dest, int scale, int sign) 
     if (src.bits[3] != 0 || src.bits[4] != 0 || src.bits[5] != 0) { // если занято больше 96 бит то делаем банковское округление
         round_bank(&src, &scale);
         if (src.bits[3] != 0 || src.bits[4] != 0 || src.bits[5] != 0) { // если после округления все равно остались лишние биты (когда scale == 0 и занято больше 96 битов)
+            null_decimal(dest); // обнуление результата при переполнении
             return (sign == 0) ? 1 : 2;
         }
     }
@@ -166,7 +167,11 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     add_big_decimal(&value_1_big, &value_2_big, &result_big);
 
     // преобразуем в decimal (используем банковское округление)
-    return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    int ret = big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }
 
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
@@ -210,7 +215,11 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     }
 
     // преобразуем в decimal (используем банковское округление)
-    return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    int ret = big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }
 
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
@@ -232,7 +241,11 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     multiply_big_decimals(&value_1_big, &value_2_big, &result_big);
 
     // преобразуем в decimal (используем банковское округление)
-    return big_to_decimal(result_big, result, scale, sign_result);
+    int ret = big_to_decimal(result_big, result, scale, sign_result);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }
 
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
@@ -275,7 +288,12 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
         remainder_big = new_remainder;
         scale++;
     }
-    return  big_to_decimal(result_big, result, scale, sign);
+    int ret = big_to_decimal(result_big, result, scale, sign);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+
+    return ret;
 }
 
 void add_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) { // складываем две структуры
