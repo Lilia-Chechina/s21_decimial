@@ -19,5 +19,9 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     multiply_big_decimals(&value_1_big, &value_2_big, &result_big);
 
     // преобразуем в decimal (используем банковское округление)
-    return big_to_decimal(result_big, result, scale, sign_result);
+    int ret = big_to_decimal(result_big, result, scale, sign_result);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }

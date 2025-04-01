@@ -25,8 +25,8 @@ void s21_copy(s21_decimal value, s21_decimal* result);
 //Help
 int is_zero(s21_decimal num);
 int is_zero_big_decimal(s21_big_decimal num);
-void null_big_decimal(s21_big_decimal* num);
 void null_decimal(s21_decimal* num);
+void null_big_decimal(s21_big_decimal* num);
 
 int get_scale(s21_decimal num);
 void set_scale(s21_decimal* num, int scale_value);

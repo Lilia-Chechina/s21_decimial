@@ -32,5 +32,9 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     add_big_decimal(&value_1_big, &value_2_big, &result_big);
 
     // преобразуем в decimal (используем банковское округление)
-    return big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    int ret = big_to_decimal(result_big, result, scale_value_1, sign_value_1);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }

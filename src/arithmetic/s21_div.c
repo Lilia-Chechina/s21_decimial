@@ -40,5 +40,9 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
         remainder_big = new_remainder;
         scale++;
     }
-    return  big_to_decimal(result_big, result, scale, sign);
+    int ret = big_to_decimal(result_big, result, scale, sign);
+    if (is_zero(*result)) { // чтобы не было -0
+        set_sign(result, 0);
+    }
+    return ret;
 }
