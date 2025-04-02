@@ -31,7 +31,7 @@ void null_big_decimal(s21_big_decimal* num);
 int get_scale(s21_decimal num);
 void set_scale(s21_decimal* num, int scale_value);
 
-int get_bit(s21_decimal num, int bit);
+int get_bit(s21_decimal яnum, int bit);
 int get_bit_big_decimal(s21_big_decimal num, int bit);
 void set_bit(s21_decimal* num, int bit, unsigned value);
 void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value);
@@ -66,3 +66,9 @@ int s21_is_less(s21_decimal a, s21_decimal b);
 int s21_is_less_or_equal(s21_decimal a, s21_decimal b);
 int s21_is_greater(s21_decimal a, s21_decimal b);
 int s21_is_greater_or_equal(s21_decimal a, s21_decimal b);
+
+// Convertors
+int s21_from_int_to_decimal(int src, s21_decimal *dst);
+int s21_from_float_to_decimal(float src, s21_decimal *dst);
+int s21_from_decimal_to_int(s21_decimal src, int *dst);
+int s21_from_decimal_to_float(s21_decimal src, float *dst);
