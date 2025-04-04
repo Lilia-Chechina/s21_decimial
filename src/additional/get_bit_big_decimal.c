@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int get_bit_big_decimal(s21_big_decimal num, int bit) { // как и get_bit, только для bit_decimal
     int index = bit / 32;

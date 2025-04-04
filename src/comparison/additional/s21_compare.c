@@ -1,4 +1,4 @@
-#include "../../main.h"
+#include "../../s21_decimal.h"
 
 int s21_compare(s21_decimal a, s21_decimal b) {
     // 0 - a == b; 1 - a > b; -1 - a < b

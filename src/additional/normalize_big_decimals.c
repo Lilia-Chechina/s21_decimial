@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void normalize_big_decimals(s21_big_decimal* a, int* scale_a, s21_big_decimal* b, int* scale_b) { // выравниваем порядки
     while (*scale_a < *scale_b) {

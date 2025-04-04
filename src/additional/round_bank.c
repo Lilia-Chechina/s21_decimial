@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void round_bank(s21_big_decimal* value, int* scale) {
     while ((value->bits[3] != 0 || value->bits[4] != 0 || value->bits[5] != 0) && *scale > 0) { // пока используется больше 96 бит или scale != 0

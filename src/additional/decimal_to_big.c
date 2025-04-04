@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void decimal_to_big(s21_decimal src, s21_big_decimal* dest) {
     for (int i = 0; i < 3; i++) {

@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int big_to_decimal(s21_big_decimal src, s21_decimal* dest, int scale, int sign) {
     if (src.bits[3] != 0 || src.bits[4] != 0 || src.bits[5] != 0) { // если занято больше 96 бит то делаем банковское округление

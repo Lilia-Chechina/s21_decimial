@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   if (dst == NULL || src != src || (src + 1 == src) || (src - 1 == src)) return 1; //  Checking for Nan and Inf

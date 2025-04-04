@@ -1,4 +1,4 @@
-#include "../../main.h"
+#include "../../s21_decimal.h"
 
 void subtract_big_decimal(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) {
     unsigned borrow = 0;

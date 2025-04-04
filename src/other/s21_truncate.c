@@ -1,9 +1,9 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int s21_truncate(s21_decimal value, s21_decimal *result) {
     int rank = get_scale(value);
 
-    s21_decimal multiplyer = { 1, 0, 0, 0 };
+    s21_decimal multiplyer = { { 1, 0, 0, 0 } };
     s21_big_decimal multiplyer_big;
     decimal_to_big(multiplyer, &multiplyer_big);
 

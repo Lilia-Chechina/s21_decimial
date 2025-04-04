@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void set_bit_big_decimal(s21_big_decimal* num, int bit, unsigned value) { // как с set_bit, только для big_decimal (используется в делении)
     int index = bit / 32;

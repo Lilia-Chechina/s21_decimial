@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int is_zero_big_decimal(s21_big_decimal num) { // как is_zero, только с big_decimal
     for (int i = 0; i < 6; i++)

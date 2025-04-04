@@ -1,4 +1,4 @@
-#include "../../main.h"
+#include "../../s21_decimal.h"
 
 int compare_big_decimal(s21_big_decimal *a, s21_big_decimal *b) { // нужно для деления
     for (int i = 191; i >= 0; i--) {

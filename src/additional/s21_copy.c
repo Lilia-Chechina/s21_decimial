@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void s21_copy(s21_decimal value, s21_decimal* result) {
     result->bits[0] = value.bits[0];

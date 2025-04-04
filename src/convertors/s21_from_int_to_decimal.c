@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 // Maybe later set up 0 and 1 like constants
 int s21_from_int_to_decimal(int src, s21_decimal *dst) {

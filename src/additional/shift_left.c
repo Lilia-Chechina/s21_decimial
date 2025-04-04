@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void shift_left(s21_big_decimal* num) { // сдвиг на 1 влево (или *2) (быстрее чем add_big_decimal, так как работаем со сдвигами)
     unsigned memory = 0;

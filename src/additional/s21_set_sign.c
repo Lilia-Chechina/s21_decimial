@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 void s21_set_sign(s21_decimal* value, bool is_negative) {
     if (is_negative) {

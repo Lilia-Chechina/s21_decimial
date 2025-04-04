@@ -10,6 +10,10 @@ typedef struct {
     uint32_t bits[6];
 } s21_big_decimal;
 
+void round_to(s21_decimal value, s21_decimal* result, bool to_bigger);
+
+int s21_floor(s21_decimal value, s21_decimal *result);
+int s21_round(s21_decimal value, s21_decimal *result);
 int s21_truncate(s21_decimal value, s21_decimal *result);
 int s21_negate(s21_decimal value, s21_decimal *result);
 
@@ -17,7 +21,6 @@ int s21_negate(s21_decimal value, s21_decimal *result);
 void s21_print_bits(s21_decimal value);
 void s21_set_sign(s21_decimal* value, bool is_negative);
 bool s21_get_sign(s21_decimal value);
-int s21_get_rank(s21_decimal value);
 void s21_copy(s21_decimal value, s21_decimal* result);
 
 //werlagad

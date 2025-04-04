@@ -1,4 +1,4 @@
-#include "../../main.h"
+#include "../../s21_decimal.h"
 
 void multiply_big_decimals(s21_big_decimal* a, s21_big_decimal* b, s21_big_decimal* result) {
     // временное хранилище результата умножения (не боимся за переполнение, так как сейчас в a и b старшие 92 бита это нули)

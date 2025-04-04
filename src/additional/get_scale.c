@@ -1,5 +1,5 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
-int get_scale(s21_decimal num) { // извлекаем scale (биты 16–23 из bits[3])
-    return (num.bits[3] >> 16) & 0xFF;
+int get_scale(s21_decimal value) {
+    return value.bits[3] >> 8 & 0xFF;
 }

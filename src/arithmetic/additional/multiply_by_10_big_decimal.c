@@ -1,4 +1,4 @@
-#include "../../main.h"
+#include "../../s21_decimal.h"
 
 void multiply_by_10_big_decimal(s21_big_decimal* num) { // x * 10 = x * 8 + x * 2 = x << 3 + x << 1
     s21_big_decimal temp1 = *num;

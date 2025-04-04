@@ -1,4 +1,4 @@
-#include "../main.h"
+#include "../s21_decimal.h"
 
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // проверка что указатель не NULL
@@ -21,7 +21,7 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // преобразуем в decimal (используем банковское округление)
     int ret = big_to_decimal(result_big, result, scale, sign_result);
     if (is_zero(*result)) { // чтобы не было -0
-        set_sign(result, 0);
+        s21_set_sign(result, 0);
     }
     return ret;
 }
